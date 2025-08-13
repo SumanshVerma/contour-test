@@ -1,0 +1,1106 @@
+# OpenShift-ready Contour install (derived from original; hostPorts & fixed UIDs removed for SCC compatibility)
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: projectcontour
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: contour
+  namespace: projectcontour
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: envoy
+  namespace: projectcontour
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contour
+  namespace: projectcontour
+data:
+  contour.yaml: |
+    disablePermitInsecure: false
+    tls:
+      fallback-certificate:
+      envoy-client-certificate:
+    accesslog-format: envoy
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: contourconfigurations.projectcontour.io
+spec:
+  group: projectcontour.io
+  names:
+    kind: ContourConfiguration
+    listKind: ContourConfigurationList
+    plural: contourconfigurations
+    shortNames:
+      - contourconfig
+    singular: contourconfiguration
+  scope: Namespaced
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: ContourConfiguration is the schema for a Contour instance.
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                debug:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    port:
+                      type: integer
+                enableExternalNameService:
+                  type: boolean
+                envoy:
+                  type: object
+                  properties:
+                    clientCertificate:
+                      type: object
+                    cluster:
+                      type: object
+                    defaultHTTPVersions:
+                      type: array
+                    health:
+                      type: object
+                    http:
+                      type: object
+                    https:
+                      type: object
+                    listener:
+                      type: object
+                    logging:
+                      type: object
+                    metrics:
+                      type: object
+                    network:
+                      type: object
+                    omEnforcedHealth:
+                      type: object
+                    service:
+                      type: object
+                    timeouts:
+                      type: object
+                featureFlags:
+                  type: array
+                  items:
+                    type: string
+                gateway:
+                  type: object
+                  required:
+                    - gatewayRef
+                  properties:
+                    gatewayRef:
+                      type: object
+                globalExtAuth:
+                  type: object
+                  properties:
+                    authPolicy:
+                      type: object
+                    extensionRef:
+                      type: object
+                    failOpen:
+                      type: boolean
+                    responseTimeout:
+                      type: string
+                    withRequestBody:
+                      type: object
+                health:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    port:
+                      type: integer
+                httpproxy:
+                  type: object
+                  properties:
+                    disablePermitInsecure:
+                      type: boolean
+                    fallbackCertificate:
+                      type: object
+                    rootNamespaces:
+                      type: array
+                ingress:
+                  type: object
+                  properties:
+                    classNames:
+                      type: array
+                    statusAddress:
+                      type: string
+                metrics:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    port:
+                      type: integer
+                    tls:
+                      type: object
+                policy:
+                  type: object
+                  properties:
+                    applyToIngress:
+                      type: boolean
+                    requestHeaders:
+                      type: object
+                    responseHeaders:
+                      type: object
+                rateLimitService:
+                  type: object
+                  required:
+                    - extensionService
+                  properties:
+                    defaultGlobalRateLimitPolicy:
+                      type: object
+                    domain:
+                      type: string
+                    enableResourceExhaustedCode:
+                      type: boolean
+                    enableXRateLimitHeaders:
+                      type: boolean
+                    extensionService:
+                      type: object
+                    failOpen:
+                      type: boolean
+                tracing:
+                  type: object
+                  required:
+                    - extensionService
+                  properties:
+                    customTags:
+                      type: array
+                    extensionService:
+                      type: object
+                    includePodDetail:
+                      type: boolean
+                    maxPathTagLength:
+                      type: integer
+                    overallSampling:
+                      type: string
+                    serviceName:
+                      type: string
+                xdsServer:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    port:
+                      type: integer
+                    tls:
+                      type: object
+            status:
+              type: object
+              properties:
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+      subresources:
+        status: {}
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: contourdeployments.projectcontour.io
+spec:
+  group: projectcontour.io
+  names:
+    kind: ContourDeployment
+    listKind: ContourDeploymentList
+    plural: contourdeployments
+    shortNames:
+      - contourdeploy
+    singular: contourdeployment
+  scope: Namespaced
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: ContourDeployment is the schema for a Contour Deployment.
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                contour:
+                  type: object
+                  properties:
+                    deployment:
+                      type: object
+                    disabledFeatures:
+                      type: array
+                    kubernetesLogLevel:
+                      type: integer
+                    logLevel:
+                      type: string
+                    nodePlacement:
+                      type: object
+                    podAnnotations:
+                      type: object
+                      additionalProperties:
+                        type: object
+                    replicas:
+                      type: integer
+                    resources:
+                      type: object
+                    watchNamespaces:
+                      type: array
+                envoy:
+                  type: object
+                  properties:
+                    baseID:
+                      type: integer
+                    daemonSet:
+                      type: object
+                    deployment:
+                      type: object
+                    extraVolumeMounts:
+                      type: array
+                    extraVolumes:
+                      type: array
+                    logLevel:
+                      type: string
+                    networkPublishing:
+                      type: object
+                    nodePlacement:
+                      type: object
+                    overloadMaxDownstreamConnections:
+                      type: integer
+                    overloadMaxHeapSize:
+                      type: integer
+                    podAnnotations:
+                      type: object
+                      additionalProperties:
+                        type: object
+                    replicas:
+                      type: integer
+                    resources:
+                      type: object
+                    workloadType:
+                      type: string
+                resourceLabels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                runtimeSettings:
+                  type: object
+                  properties:
+                    debug:
+                      type: object
+                    enableExternalNameService:
+                      type: boolean
+                    envoy:
+                      type: object
+                    featureFlags:
+                      type: array
+                    gateway:
+                      type: object
+                    globalExtAuth:
+                      type: object
+                    health:
+                      type: object
+                    httpproxy:
+                      type: object
+                    ingress:
+                      type: object
+                    metrics:
+                      type: object
+                    policy:
+                      type: object
+                    rateLimitService:
+                      type: object
+                    tracing:
+                      type: object
+                    xdsServer:
+                      type: object
+            status:
+              type: object
+              properties:
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+      subresources:
+        status: {}
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: extensionservices.projectcontour.io
+spec:
+  group: projectcontour.io
+  names:
+    kind: ExtensionService
+    listKind: ExtensionServiceList
+    plural: extensionservices
+    shortNames:
+      - extensionservice
+      - extensionservices
+    singular: extensionservice
+  scope: Namespaced
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: Contour extension services API.
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - services
+              properties:
+                circuitBreakerPolicy:
+                  type: object
+                  properties:
+                    maxConnections:
+                      type: integer
+                    maxPendingRequests:
+                      type: integer
+                    maxRequests:
+                      type: integer
+                    maxRetries:
+                      type: integer
+                    perHostMaxConnections:
+                      type: integer
+                loadBalancerPolicy:
+                  type: object
+                  properties:
+                    requestHashPolicies:
+                      type: array
+                    strategy:
+                      type: string
+                protocol:
+                  type: string
+                  enum: [h2, h2c]
+                protocolVersion:
+                  type: string
+                  enum: [v3]
+                services:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - port
+                    properties:
+                      name:
+                        type: string
+                      port:
+                        type: integer
+                timeoutPolicy:
+                  type: object
+                  properties:
+                    idle:
+                      type: string
+                    idleConnection:
+                      type: string
+                    response:
+                      type: string
+                validation:
+                  type: object
+                  required:
+                    - caSecret
+                    - subjectName
+                  properties:
+                    caSecret:
+                      type: string
+                    subjectName:
+                      type: string
+                    subjectNames:
+                      type: array
+                      items:
+                        type: string
+                  x-kubernetes-validations:
+                    - message: subjectNames[0] must equal subjectName if set
+                      rule: 'has(self.subjectNames) ? self.subjectNames[0] == self.subjectName : true'
+            status:
+              type: object
+              properties:
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+      subresources:
+        status: {}
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: httpproxies.projectcontour.io
+spec:
+  group: projectcontour.io
+  names:
+    kind: HTTPProxy
+    listKind: HTTPProxyList
+    plural: httpproxies
+    shortNames:
+      - proxy
+      - proxies
+    singular: httpproxy
+  scope: Namespaced
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: FQDN
+          type: string
+          jsonPath: .spec.virtualhost.fqdn
+          description: Fully qualified domain name
+        - name: TLS Secret
+          type: string
+          jsonPath: .spec.virtualhost.tls.secretName
+          description: Secret with TLS credentials
+        - name: Status
+          type: string
+          jsonPath: .status.currentStatus
+          description: The current status of the HTTPProxy
+        - name: Status Description
+          type: string
+          jsonPath: .status.description
+          description: Description of the current status
+      schema:
+        openAPIV3Schema:
+          description: HTTPProxy is an Ingress CRD specification.
+          type: object
+          required:
+            - metadata
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                includes:
+                  type: array
+                  items:
+                    type: object
+                ingressClassName:
+                  type: string
+                routes:
+                  type: array
+                  items:
+                    type: object
+                tcpproxy:
+                  type: object
+                  properties:
+                    healthCheckPolicy:
+                      type: object
+                virtualhost:
+                  type: object
+                  required:
+                    - fqdn
+                  properties:
+                    authorization:
+                      type: object
+            status:
+              type: object
+              default:
+                currentStatus: NotReconciled
+                description: Waiting for controller
+              properties:
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                currentStatus:
+                  type: string
+                description:
+                  type: string
+                loadBalancer:
+                  type: object
+                  properties:
+                    ingress:
+                      type: object
+      subresources:
+        status: {}
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: tlscertificatedelegations.projectcontour.io
+spec:
+  group: projectcontour.io
+  names:
+    kind: TLSCertificateDelegation
+    listKind: TLSCertificateDelegationList
+    plural: tlscertificatedelegations
+    shortNames:
+      - tlscerts
+    singular: tlscertificatedelegation
+  scope: Namespaced
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: TLS Certificate Delegation CRD.
+          type: object
+          required:
+            - metadata
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - delegations
+              properties:
+                delegations:
+                  type: array
+                  items:
+                    type: object
+            status:
+              type: object
+              properties:
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+      subresources:
+        status: {}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: contour-certgen
+  namespace: projectcontour
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: contour
+  namespace: projectcontour
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: contour-certgen
+subjects:
+  - kind: ServiceAccount
+    name: contour-certgen
+    namespace: projectcontour
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: contour-certgen
+  namespace: projectcontour
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update"]
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: contour-certgen-v1-32-0
+  namespace: projectcontour
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: contour-certgen
+    spec:
+      serviceAccountName: contour-certgen
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: contour
+          image: ghcr.io/projectcontour/contour:v1.32.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - contour
+            - certgen
+            - --kube
+            - --incluster
+            - --overwrite
+            - --secrets-format=compact
+            - --namespace=$(CONTOUR_NAMESPACE)
+          env:
+            - name: CONTOUR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: contour
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: contour
+subjects:
+  - kind: ServiceAccount
+    name: contour
+    namespace: projectcontour
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: contour-rolebinding
+  namespace: projectcontour
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: contour
+subjects:
+  - kind: ServiceAccount
+    name: contour
+    namespace: projectcontour
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: contour
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, namespaces, secrets, services]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [backendtlspolicies, gatewayclasses, gateways, grpcroutes, httproutes, referencegrants, tcproutes, tlsroutes]
+    verbs: [get, list, watch]
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [backendtlspolicies/status, gatewayclasses/status, gateways/status, grpcroutes/status, httproutes/status, tcproutes/status, tlsroutes/status]
+    verbs: [update]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses/status]
+    verbs: [create, get, update]
+  - apiGroups: [projectcontour.io]
+    resources: [contourconfigurations, extensionservices, httpproxies, tlscertificatedelegations]
+    verbs: [get, list, watch]
+  - apiGroups: [projectcontour.io]
+    resources: [contourconfigurations/status, extensionservices/status, httpproxies/status]
+    verbs: [create, get, update]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: contour
+  namespace: projectcontour
+rules:
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, get, update]
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [create, get, update]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contour
+  namespace: projectcontour
+spec:
+  type: ClusterIP
+  selector:
+    app: contour
+  ports:
+    - name: xds
+      port: 8001
+      protocol: TCP
+      targetPort: 8001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy
+  namespace: projectcontour
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+spec:
+  type: ClusterIP
+  selector:
+    app: envoy
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: contour-http
+  namespace: projectcontour
+  labels:
+    app: contour
+spec:
+  to:
+    kind: Service
+    name: envoy
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: contour-https
+  namespace: projectcontour
+  labels:
+    app: contour
+spec:
+  to:
+    kind: Service
+    name: envoy
+    weight: 100
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+  wildcardPolicy: None
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contour
+  namespace: projectcontour
+  labels:
+    app: contour
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+  selector:
+    matchLabels:
+      app: contour
+  template:
+    metadata:
+      labels:
+        app: contour
+    spec:
+      serviceAccountName: contour
+      dnsPolicy: ClusterFirst
+      securityContext:
+        runAsNonRoot: true
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: contour
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: contour
+          image: ghcr.io/projectcontour/contour:v1.32.0
+          imagePullPolicy: IfNotPresent
+          command: ["contour"]
+          args:
+            - serve
+            - --incluster
+            - --xds-address=0.0.0.0
+            - --xds-port=8001
+            - --contour-cafile=/certs/ca.crt
+            - --contour-cert-file=/certs/tls.crt
+            - --contour-key-file=/certs/tls.key
+            - --config-path=/config/contour.yaml
+          ports:
+            - name: xds
+              containerPort: 8001
+              protocol: TCP
+            - name: metrics
+              containerPort: 8000
+              protocol: TCP
+            - name: debug
+              containerPort: 6060
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8001
+            periodSeconds: 10
+          env:
+            - name: CONTOUR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: contourcert
+              mountPath: /certs
+              readOnly: true
+            - name: contour-config
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: contourcert
+          secret:
+            secretName: contourcert
+        - name: contour-config
+          configMap:
+            name: contour
+            defaultMode: 420
+            items:
+              - key: contour.yaml
+                path: contour.yaml
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: envoy
+  namespace: projectcontour
+  labels:
+    app: envoy
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
+  selector:
+    matchLabels:
+      app: envoy
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      serviceAccountName: envoy
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        runAsNonRoot: true
+      automountServiceAccountToken: false
+      initContainers:
+        - name: envoy-initconfig
+          image: ghcr.io/projectcontour/contour:v1.32.0
+          imagePullPolicy: IfNotPresent
+            # Generate bootstrap
+          command:
+            - contour
+          args:
+            - bootstrap
+            - /config/envoy.json
+            - --xds-address=contour
+            - --xds-port=8001
+            - --xds-resource-version=v3
+            - --resources-dir=/config/resources
+            - --envoy-cafile=/certs/ca.crt
+            - --envoy-cert-file=/certs/tls.crt
+            - --envoy-key-file=/certs/tls.key
+          env:
+            - name: CONTOUR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /config
+            - name: envoycert
+              mountPath: /certs
+              readOnly: true
+      containers:
+        - name: shutdown-manager
+          image: ghcr.io/projectcontour/contour:v1.32.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/contour
+          args:
+            - envoy
+            - shutdown-manager
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/contour
+                  - envoy
+                  - shutdown
+          volumeMounts:
+            - name: envoy-admin
+              mountPath: /admin
+        - name: envoy
+          image: docker.io/envoyproxy/envoy:v1.34.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - envoy
+          args:
+            - -c
+            - /config/envoy.json
+            - --service-cluster
+            - $(CONTOUR_NAMESPACE)
+            - --service-node
+            - $(ENVOY_POD_NAME)
+            - --log-level
+            - info
+          env:
+            - name: CONTOUR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: ENVOY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          # hostPorts removed for OpenShift SCC compatibility; traffic via Service + Routes
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            - name: metrics
+              containerPort: 8002
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8002
+            initialDelaySeconds: 3
+            periodSeconds: 4
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /shutdown
+                port: 8090
+                scheme: HTTP
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /config
+              readOnly: true
+            - name: envoycert
+              mountPath: /certs
+              readOnly: true
+            - name: envoy-admin
+              mountPath: /admin
+      volumes:
+        - name: envoy-admin
+          emptyDir: {}
+        - name: envoy-config
+          emptyDir: {}
+        - name: envoycert
+          secret:
+            secretName: envoycert
+      restartPolicy: Always
